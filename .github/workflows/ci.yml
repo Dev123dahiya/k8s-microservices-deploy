@@ -1,0 +1,43 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      REQUIRE_HELM: "1"        # chart tests fail, rather than skip, if helm is missing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: helm lint chart && helm lint chart -f chart/values-dev.yaml && helm lint chart -f chart/values-prod.yaml
+      - run: pytest -q
+
+  cluster:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t shop:ci .
+      - name: Start a Kubernetes cluster (kind)
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: shop
+      - name: Load the image into the cluster
+        run: kind load docker-image shop:ci --name shop
+      - name: Install the chart
+        run: >
+          helm install shop chart --namespace shop --create-namespace
+          -f chart/values-dev.yaml --set image.tag=ci --wait --timeout 240s
+      - name: Show what is running
+        run: kubectl -n shop get deployments,pods,services,networkpolicies,poddisruptionbudgets -o wide
+      - name: Request path, network policy and zero-downtime restarts
+        run: python3 scripts/cluster_test.py shop shop
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          kubectl -n shop get pods -o wide || true
+          kubectl -n shop describe pods | tail -n 120 || true
+          kubectl -n shop logs -l app.kubernetes.io/instance=shop --all-containers --tail=40 --prefix || true
