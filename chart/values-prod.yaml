@@ -1,0 +1,11 @@
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 12
+  targetCPUUtilization: 65
+resources:
+  requests: {cpu: 100m, memory: 96Mi}
+  limits: {cpu: 500m, memory: 192Mi}
+shutdown:
+  preStopSeconds: 10
+  gracePeriodSeconds: 45

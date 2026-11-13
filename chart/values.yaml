@@ -1,0 +1,43 @@
+image:
+  repository: shop
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+port: 8080
+replicas: 2            # used only when autoscaling is disabled
+
+resources:
+  requests: {cpu: 50m, memory: 64Mi}
+  limits: {cpu: 250m, memory: 128Mi}
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilization: 70
+
+networkPolicy:
+  enabled: true
+
+shutdown:
+  preStopSeconds: 5      # keep serving while the pod is removed from Service endpoints
+  gracePeriodSeconds: 30
+
+# The call graph lives here and nowhere else. `upstreams` maps an environment
+# variable to the service it should point at; the chart turns each entry into
+# a URL for the caller and a NetworkPolicy rule on the callee.
+services:
+  gateway:
+    module: services.gateway
+    public: true         # reachable from outside the release
+    upstreams:
+      ORDERS_URL: orders
+  orders:
+    module: services.orders
+    public: false
+    upstreams:
+      INVENTORY_URL: inventory
+  inventory:
+    module: services.inventory
+    public: false
+    upstreams: {}

@@ -1,0 +1,7 @@
+# Small fixed footprint for a local or CI cluster, which has no metrics server for the autoscaler.
+autoscaling:
+  enabled: false
+replicas: 2
+resources:
+  requests: {cpu: 25m, memory: 48Mi}
+  limits: {cpu: 200m, memory: 96Mi}
