@@ -1,0 +1,38 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- range $name, $svc := .Values.services }}
+---
+# Ingress to {{ $name }}: one rule per service that lists it under `upstreams`.
+# A private service nobody calls gets no rules, which denies all ingress.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $.Release.Name }}-{{ $name }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+  policyTypes: ["Ingress"]
+  ingress:
+    {{- if $svc.public }}
+    - ports:
+        - port: {{ $.Values.port }}
+    {{- end }}
+    {{- range $caller, $callerSvc := $.Values.services }}
+    {{- range $envName, $target := $callerSvc.upstreams }}
+    {{- if eq $target $name }}
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $caller }}
+              app.kubernetes.io/instance: {{ $.Release.Name }}
+      ports:
+        - port: {{ $.Values.port }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}
