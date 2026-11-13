@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "k8s-microservices-deploy"
+version = "0.1.0"
+description = "Three small services deployed to Kubernetes with a Helm chart: probes, graceful shutdown, autoscaling, network policies, and a CI job that installs it on a real cluster and proves zero-downtime rollouts"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pyyaml>=6"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools]
+packages = ["services"]
